@@ -164,11 +164,17 @@ void CSE7766Component::parse_data_() {
   }
 
   float current = 0.0f;
+  float calculated_current = 0.0f;
   if (have_current) {
     // Assumption: if we don't have power measurement, then current is likely below 50mA
-    if (have_power) {
+    if (have_power && voltage > 1.0f) {
+      calculated_current = power / voltage;
+    }
+    // Datasheet: minimum measured current is 50mA
+    if (calculated_current > 0.05f) {
       current = current_coeff / float(current_cycle);
     }
+
     this->current_acc_ += current;
     this->current_counts_++;
   }
@@ -178,7 +184,7 @@ void CSE7766Component::parse_data_() {
     std::stringstream ss;
     ss << "Parsed:";
     if (have_voltage) ss << " V=" << voltage << "V";
-    if (have_current) ss << " I=" << current * 1000.0f << "mA";
+    if (have_current) ss << " I=" << current * 1000.0f << "mA (~" << calculated_current * 1000.0f << "mA)";
     if (have_power) ss << " P=" << power << "W";
     if (energy != 0.0f) ss << " E=" << energy << "kWh (" << cf_pulses << ")";
     ESP_LOGVV(TAG, "%s", ss.str().c_str());
